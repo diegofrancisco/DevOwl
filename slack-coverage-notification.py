@@ -16,29 +16,32 @@ class Emoji:
         raise NotImplementedError
 
 def push_message_to_slack() -> None:
+    text = "Yo! Check it out, we got the code coverage for the Integrations Team's projects here:\n\n"
     env_path = Path('.') / '.env'
     load_dotenv(dotenv_path=env_path)
 
     client = slack.WebClient(token=os.environ['SLACK_TOKEN'])
-    project_key_list = os.environ['PROJECT_KEY']
+    project_list = os.environ['PROJECT_LIST']
     sonarcloud_token = os.environ['SONARCLOUD_TOKEN']
 
-    for project_key in project_key_list.split(','):
-        coverage = get_sonarcloud_coverage(project_key, sonarcloud_token)
+    for project in project_list.split(','):
+        key, value = project.split(':')
+        coverage = get_sonarcloud_coverage(key, sonarcloud_token)
         # if coverage is not None:
         #     print(f"Coverage metric for project '{project_key}': {coverage}%")
         emoji = generate_status_emoji(coverage)
-        text = f"{project_key}: {coverage}% {emoji}"
-        client.chat_postMessage(channel='#slackbot-test', text=text)
+        text += f"{value}: *{coverage}*% {emoji}\n"
+
+    client.chat_postMessage(channel='#slackbot-test', text=text)
 
 def generate_status_emoji(code_coverage: float) -> str:
     status = ":sweat:"
 
-    if code_coverage > 0 and code_coverage < 60:
+    if code_coverage > 0 and code_coverage < 35:
         status = Emoji.LIGHT
-    elif code_coverage >= 60 and code_coverage < 70:
+    elif code_coverage >= 35 and code_coverage < 60:
         status = Emoji.WARNING
-    elif code_coverage >= 70 and code_coverage < 80:
+    elif code_coverage >= 60 and code_coverage < 80:
         status = Emoji.TADA
     elif code_coverage >= 80 and code_coverage < 100:
         status = Emoji.FIRE
