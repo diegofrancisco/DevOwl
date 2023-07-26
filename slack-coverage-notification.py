@@ -24,19 +24,15 @@ def push_message_to_slack() -> None:
     sonarcloud_token = os.environ['SONARCLOUD_TOKEN']
 
     coverage = get_sonarcloud_coverage(project_key, sonarcloud_token)
-    if coverage is not None:
-        print(f"Coverage metric for project '{project_key}': {coverage}%")
+    # if coverage is not None:
+    #     print(f"Coverage metric for project '{project_key}': {coverage}%")
+    emoji = generate_status_emoji(coverage)
 
-    client.chat_postMessage(channel='#slackbot-test', text=generate_status_emoji(coverage))
+    text = f"{project_key}: {coverage}% {emoji}"
+    client.chat_postMessage(channel='#slackbot-test', text=text)
 
-def generate_status_emoji(code_coverage: str) -> str:
-    """return the status based on the code coverage percentage
-
-    :param code_coverage:               coverage including the "%" sign
-    :return:                            emoji value
-    """
+def generate_status_emoji(code_coverage: float) -> str:
     status = ":sweat:"
-    code_coverage = int(code_coverage[:-1])
 
     if code_coverage > 0 and code_coverage < 60:
         status = Emoji.LIGHT
@@ -58,21 +54,22 @@ def get_sonarcloud_coverage(project_key, sonarcloud_token):
     api_endpoint = f"{base_url}?component={project_key}&metricKeys=coverage"
     
     # Headers with authentication token
-    headers = {"Authorization": f"Basic {sonarcloud_token}"}
+    headers = {"Authorization": f"Bearer {sonarcloud_token}"}
     
     try:
         # Make the API request
         response = requests.get(api_endpoint, headers=headers)
-        response_json = response.json()
 
         # Check if the request was successful
-        if response.status_code == 200 and "component" in response_json:
-            # Extract the coverage metric from the response
-            coverage_metric = response_json["component"]["measures"][0]["value"]
-            return float(coverage_metric)
-        else:
-            print("Failed to retrieve coverage metric. Check your project key and authentication token.")
-            return None
+        if response.status_code == 200:
+            response_json = response.json()
+            if "component" in response_json:
+                # Extract the coverage metric from the response
+                coverage_metric = response_json["component"]["measures"][0]["value"]
+                return float(coverage_metric)
+        
+        print("Failed to retrieve coverage metric. Check your project key and authentication token.")
+        return None
     except Exception as e:
         print(f"Error occurred: {e}")
         return None
