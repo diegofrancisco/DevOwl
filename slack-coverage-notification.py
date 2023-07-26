@@ -20,16 +20,16 @@ def push_message_to_slack() -> None:
     load_dotenv(dotenv_path=env_path)
 
     client = slack.WebClient(token=os.environ['SLACK_TOKEN'])
-    project_key = os.environ['PROJECT_KEY']
+    project_key_list = os.environ['PROJECT_KEY']
     sonarcloud_token = os.environ['SONARCLOUD_TOKEN']
 
-    coverage = get_sonarcloud_coverage(project_key, sonarcloud_token)
-    # if coverage is not None:
-    #     print(f"Coverage metric for project '{project_key}': {coverage}%")
-    emoji = generate_status_emoji(coverage)
-
-    text = f"{project_key}: {coverage}% {emoji}"
-    client.chat_postMessage(channel='#slackbot-test', text=text)
+    for project_key in project_key_list.split(','):
+        coverage = get_sonarcloud_coverage(project_key, sonarcloud_token)
+        # if coverage is not None:
+        #     print(f"Coverage metric for project '{project_key}': {coverage}%")
+        emoji = generate_status_emoji(coverage)
+        text = f"{project_key}: {coverage}% {emoji}"
+        client.chat_postMessage(channel='#slackbot-test', text=text)
 
 def generate_status_emoji(code_coverage: float) -> str:
     status = ":sweat:"
