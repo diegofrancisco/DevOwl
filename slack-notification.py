@@ -76,9 +76,46 @@ def get_sonarcloud_coverage(project_key, sonarcloud_token):
     except Exception as e:
         print(f"Error occurred: {e}")
         return None
+    
+import requests
+
+def get_outstanding_prs(repo_owner, repo_name, github_token):
+    headers = {
+        "Authorization": f"Bearer {github_token}"
+    }
+
+    # GitHub API endpoint to get open pull requests
+    api_url = f"https://api.github.com/repos/{repo_owner}/{repo_name}/pulls"
+
+    try:
+        response = requests.get(api_url, headers=headers)
+        if response.status_code == 200:
+            prs = response.json()
+            return prs
+        else:
+            print(f"Failed to retrieve pull requests. Status code: {response.status_code}")
+            return []
+    except Exception as e:
+        print(f"Error occurred: {e}")
+        return []
+    
+def push_outstanding_prs_to_slack():
+    github_token = "YOUR_GITHUB_TOKEN"
+    repo_owner = "YOUR_REPO_OWNER"
+    repo_name = "YOUR_REPO_NAME"
+
+    outstanding_prs = get_outstanding_prs(repo_owner, repo_name, github_token)
+
+    if outstanding_prs:
+        print("Outstanding Pull Requests:")
+        for pr in outstanding_prs:
+            print(f"- PR #{pr['number']}: {pr['title']} ({pr['user']['login']})")
+    else:
+        print("No outstanding Pull Requests.")
 
 def main() -> None:
     push_message_to_slack()
+    #push_outstanding_prs_to_slack()
 
 if __name__ == "__main__":
     main()
