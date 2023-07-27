@@ -16,9 +16,7 @@ class Emoji:
         raise NotImplementedError
 
 def push_message_to_slack() -> None:
-    text = "Yo! Check it out, we got the code coverage for the Integrations Team's projects here:\n\n"
-    env_path = Path('.') / '.env'
-    load_dotenv(dotenv_path=env_path)
+    text = "Hoot! Hoot! Check it out, we got the code coverage for the Integrations Team's projects here:\n\n"
 
     client = slack.WebClient(token=os.environ['SLACK_TOKEN'])
     project_list = os.environ['PROJECT_LIST']
@@ -100,9 +98,9 @@ def get_outstanding_prs(repo_owner, repo_name, github_token):
         return []
     
 def push_outstanding_prs_to_slack():
-    github_token = "YOUR_GITHUB_TOKEN"
-    repo_owner = "YOUR_REPO_OWNER"
-    repo_name = "YOUR_REPO_NAME"
+    github_token = os.environ['GITHUB_TOKEN']
+    repo_owner = os.environ['REPO_OWNER']
+    repo_name = os.environ['REPO_NAME']
 
     outstanding_prs = get_outstanding_prs(repo_owner, repo_name, github_token)
 
@@ -114,8 +112,12 @@ def push_outstanding_prs_to_slack():
         print("No outstanding Pull Requests.")
 
 def main() -> None:
-    push_message_to_slack()
-    #push_outstanding_prs_to_slack()
+    # Loading .env values
+    env_path = Path('.') / '.env'
+    load_dotenv(dotenv_path=env_path)
+
+    #push_message_to_slack()
+    push_outstanding_prs_to_slack()
 
 if __name__ == "__main__":
     main()
