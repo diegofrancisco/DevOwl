@@ -3,7 +3,7 @@ import os
 import requests
 from pathlib import Path
 from dotenv import load_dotenv
-
+from datetime import datetime, timedelta
 
 class Emoji:
     LIGHT = ":rotating_light:"
@@ -15,12 +15,10 @@ class Emoji:
     def __init__(self) -> None:
         raise NotImplementedError
 
-def push_message_to_slack() -> None:
-    text = "Hoot! Hoot! Check it out, we got the code coverage for the Integrations Team's projects here:\n\n"
-
-    client = slack.WebClient(token=os.environ['SLACK_TOKEN'])
+def generate_coverage_message() -> str:
     project_list = os.environ['PROJECT_LIST']
     sonarcloud_token = os.environ['SONARCLOUD_TOKEN']
+    text = ''
 
     for project in project_list.split(','):
         key, value = project.split(':')
@@ -30,7 +28,7 @@ def push_message_to_slack() -> None:
         emoji = generate_status_emoji(coverage)
         text += f"{value}: *{coverage}*% {emoji}\n"
 
-    client.chat_postMessage(channel='#slackbot-test', text=text)
+    return text
 
 def generate_status_emoji(code_coverage: float) -> str:
     status = ":sweat:"
@@ -86,7 +84,14 @@ def get_outstanding_prs(repo_owner, repo_name, github_token):
     api_url = f"https://api.github.com/repos/{repo_owner}/{repo_name}/pulls"
 
     try:
-        response = requests.get(api_url, headers=headers)
+        params = {
+            "state": "open",
+            "sort": "created",
+            "direction": "desc",
+            "since": (datetime.utcnow() - timedelta(weeks=1)).isoformat()
+        }
+
+        response = requests.get(api_url, headers=headers, params=params)
         if response.status_code == 200:
             prs = response.json()
             return prs
@@ -97,27 +102,37 @@ def get_outstanding_prs(repo_owner, repo_name, github_token):
         print(f"Error occurred: {e}")
         return []
     
-def push_outstanding_prs_to_slack():
+def generate_outstanding_prs_message():
     github_token = os.environ['GITHUB_TOKEN']
     repo_owner = os.environ['REPO_OWNER']
     repo_name = os.environ['REPO_NAME']
+    text = ''
 
     outstanding_prs = get_outstanding_prs(repo_owner, repo_name, github_token)
 
     if outstanding_prs:
-        print("Outstanding Pull Requests:")
-        for pr in outstanding_prs:
-            print(f"- PR #{pr['number']}: {pr['title']} ({pr['user']['login']})")
+        text += f"Outstanding Pull Requests for *{repo_name}*:\n"
+        for index, pr in enumerate(outstanding_prs):
+            if index >= 5:
+                break
+            text += f"- <{pr['html_url']}|PR #{pr['number']}>: {pr['title']} ({pr['user']['login']})\n"
     else:
         print("No outstanding Pull Requests.")
+
+    return text
 
 def main() -> None:
     # Loading .env values
     env_path = Path('.') / '.env'
     load_dotenv(dotenv_path=env_path)
 
-    #push_message_to_slack()
-    push_outstanding_prs_to_slack()
+    text = "Hoot! Hoot! Check it out, we got the code coverage for the Integrations Team's projects here:\n\n"
+    text += generate_coverage_message()
+    text += "\nAlso take a peak in the outstanding PR's from the team:\n\n"
+    text += generate_outstanding_prs_message()
+
+    client = slack.WebClient(token=os.environ['SLACK_TOKEN'])
+    client.chat_postMessage(channel='#slackbot-test', text=text)
 
 if __name__ == "__main__":
     main()
